@@ -1,4 +1,4 @@
-import pathlib
+import pathlib, random
 import typing as tp
 
 T = tp.TypeVar("T")
@@ -14,7 +14,7 @@ def read_sudoku(path: tp.Union[str, pathlib.Path]) -> tp.List[tp.List[str]]:
 
 def create_grid(puzzle: str) -> tp.List[tp.List[str]]:
     digits = [c for c in puzzle if c in "123456789."]
-    grid = group(digits, 9)
+    grid = group(digits, 81)
     return grid
 
 
@@ -22,10 +22,10 @@ def display(grid: tp.List[tp.List[str]]) -> None:
     """Вывод Судоку """
     width = 2
     line = "+".join(["-" * (width * 3)] * 3)
-    for row in range(9):
+    for row in range(81):
         print(
             "".join(
-                grid[row][col].center(width) + ("|" if str(col) in "25" else "") for col in range(9)
+                grid[row][col].center(width) + ("|" if str(col) in "25" else "") for col in range(81)
             )
         )
         if str(row) in "25":
@@ -42,7 +42,11 @@ def group(values: tp.List[T], n: int) -> tp.List[tp.List[T]]:
     >>> group([1,2,3,4,5,6,7,8,9], 3)
     [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
     """
-    pass
+    list1 = []
+    while len(values) > 0:
+        list1.append(values[:n])
+        values = values[n:]
+    return list1
 
 
 def get_row(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[str]:
@@ -55,7 +59,7 @@ def get_row(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[str
     >>> get_row([['1', '2', '3'], ['4', '5', '6'], ['.', '8', '9']], (2, 0))
     ['.', '8', '9']
     """
-    pass
+    return grid[pos[0]]
 
 
 def get_col(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[str]:
@@ -68,7 +72,10 @@ def get_col(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[str
     >>> get_col([['1', '2', '3'], ['4', '5', '6'], ['.', '8', '9']], (0, 2))
     ['3', '6', '9']
     """
-    pass
+    list1 = []
+    for i in range(len(grid)):
+        list1.append(grid[i][pos[1]])
+    return list1
 
 
 def get_block(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[str]:
@@ -82,7 +89,13 @@ def get_block(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.List[s
     >>> get_block(grid, (8, 8))
     ['2', '8', '.', '.', '.', '5', '.', '7', '9']
     """
-    pass
+    x0 = (pos[0] // 3) * 3
+    y0 = (pos[1] // 3) * 3
+    list1 = []
+    for i in range(3):
+        for j in range(3):
+            list1.append(grid[x0 + i][y0 + j])
+    return list1
 
 
 def find_empty_positions(grid: tp.List[tp.List[str]]) -> tp.Optional[tp.Tuple[int, int]]:
@@ -95,7 +108,10 @@ def find_empty_positions(grid: tp.List[tp.List[str]]) -> tp.Optional[tp.Tuple[in
     >>> find_empty_positions([['1', '2', '3'], ['4', '5', '6'], ['.', '8', '9']])
     (2, 0)
     """
-    pass
+    for i in range(len(grid)):
+        for j in grid[i]:
+            if j == '.':
+                return i, grid[i].index(j)
 
 
 def find_possible_values(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -> tp.Set[str]:
@@ -109,7 +125,14 @@ def find_possible_values(grid: tp.List[tp.List[str]], pos: tp.Tuple[int, int]) -
     >>> values == {'2', '5', '9'}
     True
     """
-    pass
+    list1 = []
+    for i in range(1, 10):
+        if (str(i) not in get_block(grid, pos)) and (str(i) not in get_col(grid, pos)) and (
+                str(i) not in get_row(grid, pos)):
+            list1.append(str(i))
+    list1 = set(list1)
+
+    return list1
 
 
 def solve(grid: tp.List[tp.List[str]]) -> tp.Optional[tp.List[tp.List[str]]]:
@@ -125,13 +148,47 @@ def solve(grid: tp.List[tp.List[str]]) -> tp.Optional[tp.List[tp.List[str]]]:
     >>> solve(grid)
     [['5', '3', '4', '6', '7', '8', '9', '1', '2'], ['6', '7', '2', '1', '9', '5', '3', '4', '8'], ['1', '9', '8', '3', '4', '2', '5', '6', '7'], ['8', '5', '9', '7', '6', '1', '4', '2', '3'], ['4', '2', '6', '8', '5', '3', '7', '9', '1'], ['7', '1', '3', '9', '2', '4', '8', '5', '6'], ['9', '6', '1', '5', '3', '7', '2', '8', '4'], ['2', '8', '7', '4', '1', '9', '6', '3', '5'], ['3', '4', '5', '2', '8', '6', '1', '7', '9']]
     """
-    pass
+    empty_position = find_empty_positions(grid)
+    if not empty_position:
+        return grid
+    rowind, column = empty_position
+    new_grid = []
+    for row in grid:
+        new_grid.append(row.copy())
+    for i in find_possible_values(new_grid, empty_position):
+        new_grid[rowind][column] = i
+        solution = solve(new_grid)
+        if solution is not None:
+            return solution
+    return None
 
 
 def check_solution(solution: tp.List[tp.List[str]]) -> bool:
     """ Если решение solution верно, то вернуть True, в противном случае False """
     # TODO: Add doctests with bad puzzles
-    pass
+    for row in solution:
+        numbers = {"1", "2", "3", "4", "5", "6", "7", "8", "9"}
+        for element_row in row:
+            if element_row in numbers:
+                numbers.remove(element_row)
+        if len(numbers) != 0:
+            return False
+    for colind in range(0, 9):
+        numbers = {"1", "2", "3", "4", "5", "6", "7", "8", "9"}
+        for element_col in get_col(solution, (0, colind)):
+            if element_col in numbers:
+                numbers.remove(element_col)
+        if len(numbers) != 0:
+            return False
+    for rowind in range(0, 6, 3):
+        for colind in range(0, 6, 3):
+            numbers = {"1", "2", "3", "4", "5", "6", "7", "8", "9"}
+            for element_block in get_block(solution, (rowind, colind)):
+                if element_block in numbers:
+                    numbers.remove(element_block)
+            if len(numbers) != 0:
+                return False
+    return True
 
 
 def generate_sudoku(N: int) -> tp.List[tp.List[str]]:
@@ -156,11 +213,23 @@ def generate_sudoku(N: int) -> tp.List[tp.List[str]]:
     >>> check_solution(solution)
     True
     """
-    pass
+    grid = solve([["."] * 9 for _ in range(0, 9)])
+    if grid is not None:
+        k_empty = 81 - N
+
+        while k_empty != 0:
+            row = random.randint(0, 8)
+            col = random.randint(0, 8)
+            if grid[row][col] != ".":
+                grid[row][col] = "."
+                k_empty -= 1
+        return grid
+    else:
+        return []
 
 
 if __name__ == "__main__":
-    for fname in ["puzzle1.txt", "puzzle2.txt", "puzzle3.txt"]:
+    for fname in ["hard_puzzles.txt"]:
         grid = read_sudoku(fname)
         display(grid)
         solution = solve(grid)
